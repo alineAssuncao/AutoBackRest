@@ -1,0 +1,2 @@
+Validador Schema XML = https://www.freeformatter.com/xsd-generator.html#google_vignette
+Validador Schema JSON = https://transform.tools/json-to-json-schema
