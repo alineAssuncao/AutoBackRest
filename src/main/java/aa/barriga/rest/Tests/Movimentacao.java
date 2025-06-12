@@ -6,11 +6,11 @@ public class Movimentacao {
     private String descricao;
     private String envolvido;
     private String tipo;
-    private String dataTransacao;
-    private String dataPagamento;
+    private String data_transacao;
+    private String data_pagamento;
     private float valor;
     private boolean status;
-    private Integer contaId;
+    private Integer conta_id;
     private Integer usuarioId;
 
     public Integer getId() {
@@ -45,20 +45,20 @@ public class Movimentacao {
         this.tipo = tipo;
     }
 
-    public String getDataTransacao() {
-        return dataTransacao;
+    public String getData_transacao() {
+        return data_transacao;
     }
 
-    public void setDataTransacao(String dataTransacao) {
-        this.dataTransacao = dataTransacao;
+    public void setData_transacao(String data_transacao) {
+        this.data_transacao = data_transacao;
     }
 
-    public String getDataPagamento() {
-        return dataPagamento;
+    public String getData_pagamento() {
+        return data_pagamento;
     }
 
-    public void setDataPagamento(String dataPagamento) {
-        this.dataPagamento = dataPagamento;
+    public void setData_pagamento(String data_pagamento) {
+        this.data_pagamento = data_pagamento;
     }
 
     public float getValor() {
@@ -77,12 +77,12 @@ public class Movimentacao {
         this.status = status;
     }
 
-    public Integer getContaId() {
-        return contaId;
+    public Integer getConta_id() {
+        return conta_id;
     }
 
-    public void setContaId(Integer contaId) {
-        this.contaId = contaId;
+    public void setConta_id(Integer conta_id) {
+        this.conta_id = conta_id;
     }
 
     public Integer getUsuarioId() {

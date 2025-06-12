@@ -87,13 +87,14 @@ public class BarrigaTest extends BaseTest {
     public void deveIncluirMovimentacaoSucesso(){
 
         Movimentacao mov = new Movimentacao();
-        mov.setContaId(var._idConta);
+        mov.setId(var._idConta);
         //mov.setUsuarioId(???);
         mov.setDescricao("Descrição da movimentação");
         mov.setEnvolvido("Envolvido na movimentação");
         mov.setTipo("REC");
-        mov.setDataTransacao("01/05/2010");
-        mov.setDataPagamento("10/05/2010");
+        mov.setConta_id(var._idConta);
+        mov.setData_transacao("01/05/2010");
+        mov.setData_pagamento("10/05/2010");
         mov.setValor(100f);
         mov.setStatus(true);
 
@@ -105,6 +106,85 @@ public class BarrigaTest extends BaseTest {
                     .post(var._rotaTransacoes)
                 .then()
                     .statusCode(201)
+        ;
+    }
+
+    @Test
+    public void deveValidarCamposObrigatoriosMovimentacao(){
+
+        RestAssured
+                .given()
+                    .header("Authorization", "JWT "+TOKEN)
+                    .body("{}")
+                .when()
+                    .post(var._rotaTransacoes)
+                .then()
+                    .statusCode(400)
+                    .body("$", Matchers.hasSize(8))
+                    .body("msg", Matchers.hasItems(
+                            "Data da Movimentação é obrigatório",
+                            "Data do pagamento é obrigatório",
+                            "Descrição é obrigatório",
+                            "Interessado é obrigatório",
+                            "Valor é obrigatório",
+                            "Valor deve ser um número",
+                            "Conta é obrigatório",
+                            "Situação é obrigatório"
+                    ))
+        ;
+    }
+
+    @Test
+    public void naoDeveIncluirMovimentacaoFutura(){
+
+        Movimentacao mov = new Movimentacao();
+        mov.setId(var._idConta);
+        //mov.setUsuarioId(???);
+        mov.setDescricao("Descrição da movimentação");
+        mov.setEnvolvido("Envolvido na movimentação");
+        mov.setTipo("REC");
+        mov.setConta_id(var._idConta);
+        mov.setData_transacao("01/05/2050");
+        mov.setData_pagamento("10/05/2050");
+        mov.setValor(100f);
+        mov.setStatus(true);
+
+        RestAssured
+                .given()
+                    .header("Authorization", "JWT "+TOKEN) // APIs mais novas usam "bearer " + token ou ver outra solução
+                    .body(mov)
+                .when()
+                    .post(var._rotaTransacoes)
+                .then()
+                    .statusCode(400)
+                    .body("$", Matchers.hasSize(1))
+                    .body("msg", Matchers.hasItem("Data da Movimentação deve ser menor ou igual à data atual"))
+        ;
+    }
+
+    @Test
+    public void naoDeveRemoverContaComMovimentacao(){
+
+        Movimentacao mov = new Movimentacao();
+        mov.setId(var._idConta);
+        //mov.setUsuarioId(???);
+        mov.setDescricao("Descrição da movimentação");
+        mov.setEnvolvido("Envolvido na movimentação");
+        mov.setTipo("REC");
+        mov.setConta_id(var._idConta);
+        mov.setData_transacao("01/05/2020");
+        mov.setData_pagamento("10/05/2020");
+        mov.setValor(100f);
+        mov.setStatus(true);
+
+        RestAssured
+                .given()
+                .header("Authorization", "JWT "+TOKEN) // APIs mais novas usam "bearer " + token ou ver outra solução
+                .body(mov)
+                .when()
+                .delete(var._rotaContas)
+                .then()
+                .statusCode(500)
         ;
     }
 }
