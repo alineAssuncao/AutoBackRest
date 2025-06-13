@@ -1,9 +1,13 @@
 package aa.barriga.rest.Tests;
 
+import aa.barriga.rest.Util.DataUtil;
 import aa.barriga.rest.core.BaseTest;
 import io.restassured.RestAssured;
+import io.restassured.specification.FilterableRequestSpecification;
+import jdk.internal.org.jline.terminal.TerminalBuilder;
 import org.hamcrest.Matchers;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -12,15 +16,17 @@ import java.util.Map;
 public class BarrigaTest extends BaseTest {
 
     BarrigaVariaveis var = new BarrigaVariaveis();
-    private String TOKEN;
 
-    @Before
-    public void login(){
+    private static String CONTA_NAME = "CONTA " + System.nanoTime();
+    private static Integer CONTA_ID;
+
+    @BeforeClass
+    public static void login(){
         Map<String, String> login = new HashMap<>();
         login.put("email", var._eMail);
         login.put("senha", var._senha);
 
-        TOKEN = RestAssured
+        String TOKEN = RestAssured
                 .given()
                     .body(login)
                 .when()
@@ -29,10 +35,14 @@ public class BarrigaTest extends BaseTest {
                     .statusCode(200)
                     .extract().path("token")
                 ;
+        RestAssured.responseSpecification.header("Authorization", "JWT "+TOKEN);
     }
 
     @Test
     public void naoDeveAcessarAPISemToken(){
+        FilterableRequestSpecification req = (FilterableRequestSpecification) RestAssured.requestSpecification;
+        req.removeHeader("Authorization");
+
         RestAssured
                 .given()
                 .when()
@@ -44,14 +54,15 @@ public class BarrigaTest extends BaseTest {
 
     @Test
     public void deveIncluirContaComSucesso(){
-        RestAssured
+
+        CONTA_ID = RestAssured
                 .given()
-                    .header("Authorization", "JWT "+TOKEN) // APIs mais novas usam "bearer " + token ou ver outra solução
                     .body(var._bodyContaNova)
                 .when()
                     .post(var._rotaContas)
                 .then()
                     .statusCode(201)
+                    .extract().path("id")
         ;
     }
 
@@ -59,10 +70,10 @@ public class BarrigaTest extends BaseTest {
     public void deveAlterarContaComSucesso(){
         RestAssured
                 .given()
-                    .header("Authorization", "JWT "+TOKEN) // APIs mais novas usam "bearer " + token ou ver outra solução
                     .body(var._bodyContaAlterada)
+                    .pathParam("id", CONTA_ID)
                 .when()
-                    .put(var._rotaContas + var._idConta)
+                    .put(var._rotaContas + CONTA_ID)
                 .then()
                     .statusCode(200)
                     .body("nome", Matchers.is(var._nomeContaAlterada))
@@ -73,7 +84,6 @@ public class BarrigaTest extends BaseTest {
     public void naoDeveIncluirContaComMesmoNome(){
         RestAssured
                 .given()
-                    .header("Authorization", "JWT "+TOKEN) // APIs mais novas usam "bearer " + token ou ver outra solução
                     .body(var._nomeContaAlterada)
                 .when()
                     .post(var._rotaContas)
@@ -100,7 +110,6 @@ public class BarrigaTest extends BaseTest {
 
         RestAssured
                 .given()
-                    .header("Authorization", "JWT "+TOKEN) // APIs mais novas usam "bearer " + token ou ver outra solução
                     .body(mov)
                 .when()
                     .post(var._rotaTransacoes)
@@ -114,7 +123,6 @@ public class BarrigaTest extends BaseTest {
 
         RestAssured
                 .given()
-                    .header("Authorization", "JWT "+TOKEN)
                     .body("{}")
                 .when()
                     .post(var._rotaTransacoes)
@@ -144,14 +152,13 @@ public class BarrigaTest extends BaseTest {
         mov.setEnvolvido("Envolvido na movimentação");
         mov.setTipo("REC");
         mov.setConta_id(var._idConta);
-        mov.setData_transacao("01/05/2050");
-        mov.setData_pagamento("10/05/2050");
+        mov.setData_transacao(DataUtil.getDataDiferencaDias(15));
+        mov.setData_pagamento(DataUtil.getDataDiferencaDias(20));
         mov.setValor(100f);
         mov.setStatus(true);
 
         RestAssured
                 .given()
-                    .header("Authorization", "JWT "+TOKEN) // APIs mais novas usam "bearer " + token ou ver outra solução
                     .body(mov)
                 .when()
                     .post(var._rotaTransacoes)
@@ -172,6 +179,31 @@ public class BarrigaTest extends BaseTest {
         mov.setEnvolvido("Envolvido na movimentação");
         mov.setTipo("REC");
         mov.setConta_id(var._idConta);
+        mov.setData_transacao(DataUtil.getDataDiferencaDias(0));
+        mov.setData_pagamento(DataUtil.getDataDiferencaDias(0));
+        mov.setValor(100f);
+        mov.setStatus(true);
+
+        RestAssured
+                .given()
+                .body(mov)
+                .when()
+                .delete(var._rotaContas)
+                .then()
+                .statusCode(500)
+        ;
+    }
+
+    @Test
+    public void deveCalcularSaldoContas(){
+
+        Movimentacao mov = new Movimentacao();
+        mov.setId(var._idConta);
+        //mov.setUsuarioId(???);
+        mov.setDescricao("Descrição da movimentação");
+        mov.setEnvolvido("Envolvido na movimentação");
+        mov.setTipo("REC");
+        mov.setConta_id(var._idConta);
         mov.setData_transacao("01/05/2020");
         mov.setData_pagamento("10/05/2020");
         mov.setValor(100f);
@@ -179,12 +211,27 @@ public class BarrigaTest extends BaseTest {
 
         RestAssured
                 .given()
-                .header("Authorization", "JWT "+TOKEN) // APIs mais novas usam "bearer " + token ou ver outra solução
-                .body(mov)
+                    .body(mov)
                 .when()
-                .delete(var._rotaContas)
+                    .get(var._rotaContas)
                 .then()
-                .statusCode(500)
+                    .statusCode(200)
+                    //Busca mais complexa, buscando unico Json dentro de um array
+                    .body("find{it.conta_id == 2476387}.saldo", Matchers.is("100.00"))
         ;
+    }@Test
+    public void deveRemoverMovimentacao(){
+
+        RestAssured
+                .given()
+                .when()
+                    .delete(var._rotaTransacoes + "/115889")
+                .then()
+                    .statusCode(204)
+        ;
+    }
+    
+    public Integer getIdContaPeloNome(String nome){
+        return RestAssured.get("/contas?nome="+nome).then().extract().path("id[0]");
     }
 }
